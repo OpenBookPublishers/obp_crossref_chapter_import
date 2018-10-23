@@ -1,0 +1,158 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Find missing chapters and/or chapter identifiers in Crossref and submit new findings to the identifier translation service.
+
+usage: python run
+
+(c) Javier Arias, Open Book Publishers, October 2018
+Use of this software is governed by the terms of the MIT license
+
+Dependencies:
+  httplib2==0.10.3
+  urllib3==1.20
+"""
+
+import os
+import sys
+import csv
+import json
+import urllib2
+import httplib2
+
+USER_AGENT    = os.environ['USER_AGENT']
+CROSSREF_ROWS = os.environ['CROSSREF_ROWS']
+URI_API_ENDP  = os.environ['URI_API_ENDP']
+URI_API_USER  = os.environ['URI_API_USER']
+URI_API_PASS  = os.environ['URI_API_PASS']
+AUTH_API_ENDP = os.environ['AUTH_API_ENDP']
+URI_API_WORKS = os.environ['URI_API_WORKS']
+URI_API_URIS  = os.environ['URI_API_URIS']
+
+def get_token(url, email, passwd):
+    h = httplib2.Http()
+    credentials = {'email': email, 'password': passwd}
+    headers = {'content-type': 'application/json'}
+    res, content = h.request(url, 'POST', json.dumps(credentials), headers)
+    try:
+        assert res.status == 200
+    except AssertionError:
+        raise ValueError(content)
+    return json.loads(content)['data'][0]['token']
+
+def get_all_books():
+    url = URI_API_WORKS + '?filter=work_type:monograph,uri_scheme:urn:isbn,canonical:true'
+    return request_identifiers(url)
+
+def get_chapters(isbn):
+    url = "https://api.crossref.org/works?filter=type:book-chapter,type:book-part,type:book-section,type:component,isbn:" + isbn + "&select=title,DOI,ISBN,type,URL&rows=" + CROSSREF_ROWS
+    h = httplib2.Http()
+    res, content = h.request(url, 'GET', headers={'User-Agent': USER_AGENT})
+    try:
+        assert res.status == 200
+    except AssertionError:
+        raise ValueError(content)
+
+    return json.loads(content)['message']['items']
+
+def get_from_doi(doi):
+    url = URI_API_ENDP + "?uri=" + doi
+    return request_identifiers(url)
+
+def submit(url, data):
+    h = httplib2.Http()
+    headers = {'content-type': 'application/json',
+               'Authorization': 'Bearer ' + API_JWTOKEN}
+    res, content = h.request(url, 'POST', json.dumps(data), headers)
+    try:
+        assert res.status == 200
+    except AssertionError:
+        sys.stderr.write(content)
+
+def request_identifiers(url):
+    h = httplib2.Http()
+    res, content = h.request(url, 'GET',
+        headers={'Authorization': 'Bearer ' + API_JWTOKEN})
+    try:
+        assert res.status == 200
+    except AssertionError:
+        raise ValueError(content)
+
+    return json.loads(content)['data']
+
+def get_uuid_from_uris(uris):
+    uuid = ''
+    for uri in uris:
+        assert uuid == '' or uuid == uri['work']['UUID']
+        uuid = uri['work']['UUID']
+    return uuid
+
+def get_uri_from_uris(uri, uris):
+    for e in uris:
+        if e['URI'] == uri:
+            return e['URI']
+    return ''
+
+def standarise_uri(uri, canonical="false"):
+    return {'URI': uri, 'canonical': canonical}
+
+def standarise_uris(uris):
+    return [standarise_uri(e) for e in uris]
+
+def process_works(works):
+    for work in works:
+        try:
+            uuid = work['UUID']
+            isbn = work['URI'][0]['URI_parts']['value']
+            assert uuid and isbn
+        except AssertionError:
+            sys.stderr.write("Malformed record:\n")
+            sys.stderr.write(work)
+            sys.exit(1)
+
+        try:
+            chapters = get_chapters(isbn)
+            assert chapters
+        except:
+            sys.stderr.write("No chapters found for: " \
+                             + work['title'][0] + " (" + uuid + ")\n")
+            continue
+
+        for chapter in chapters:
+            isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
+            doi = "info:doi:" + chapter['DOI']
+            input_uris = standarise_uris(isbns)
+            input_uris.append(standarise_uri(doi, "true"))
+            input_uris.append(standarise_uri(chapter['URL']))
+            try:
+                uris = get_from_doi(doi)
+                chap_uuid = get_uuid_from_uris(uris)
+                assert uris and uuid
+            except:
+                # add new work
+                title = chapter['title']
+                wtype = chapter['type']
+                work = {'title': title, 'type': wtype, 'URI': input_uris}
+                submit(URI_API_WORKS, work)
+                continue
+
+            # insert input URIs if not already in database
+            for uri in input_uris:
+                candidate = get_uri_from_uris(uri['URI'], uris)
+                try:
+                    assert candidate == ''
+                except AssertionError:
+                    continue
+                new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
+                submit(URI_API_URIS, new_uri)
+
+def run():
+    assert API_JWTOKEN
+    all_works = get_all_books()
+    assert all_works
+    process_works(all_works)
+
+API_JWTOKEN = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
+
+if __name__ == '__main__':
+    run()
