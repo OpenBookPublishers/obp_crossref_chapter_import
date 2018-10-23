@@ -28,6 +28,7 @@ URI_API_PASS  = os.environ['URI_API_PASS']
 AUTH_API_ENDP = os.environ['AUTH_API_ENDP']
 URI_API_WORKS = os.environ['URI_API_WORKS']
 URI_API_URIS  = os.environ['URI_API_URIS']
+URI_API_REL   = os.environ['URI_API_REL']
 
 def get_token(url, email, passwd):
     h = httplib2.Http()
@@ -43,6 +44,10 @@ def get_token(url, email, passwd):
 def get_all_books():
     url = URI_API_WORKS + '?filter=work_type:monograph,uri_scheme:urn:isbn,canonical:true'
     return request_identifiers(url)
+
+def get_work(uuid):
+    url = URI_API_WORKS + '?UUID=' + uuid
+    return request_identifiers(url)[0]
 
 def get_chapters(isbn):
     url = "https://api.crossref.org/works?filter=type:book-chapter,type:book-part,type:book-section,type:component,isbn:" + isbn + "&select=title,DOI,ISBN,type,URL&rows=" + CROSSREF_ROWS
@@ -118,6 +123,10 @@ def process_works(works):
                              + work['title'][0] + " (" + uuid + ")\n")
             continue
 
+        # get children
+        work_record = get_work(uuid)
+        children = work_record['child']
+
         for chapter in chapters:
             isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
             doi = "info:doi:" + chapter['DOI']
@@ -130,9 +139,11 @@ def process_works(works):
                 assert uris and uuid
             except:
                 # add new work
-                title = chapter['title']
-                wtype = chapter['type']
-                work = {'title': title, 'type': wtype, 'URI': input_uris}
+                title  = chapter['title']
+                wtype  = chapter['type']
+                parent = uuid
+                work = {'title': title, 'type': wtype, 'URI': input_uris, \
+                        'parent': parent}
                 submit(URI_API_WORKS, work)
                 continue
 
@@ -145,6 +156,13 @@ def process_works(works):
                     continue
                 new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
                 submit(URI_API_URIS, new_uri)
+            # add work_relation if not present
+            try:
+                assert chap_uuid in children
+            except AssertionError:
+                relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
+                submit(URI_API_REL, relation)
+                continue
 
 def run():
     assert API_JWTOKEN
