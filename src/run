@@ -42,7 +42,7 @@ def get_token(url, email, passwd):
     return json.loads(content)['data'][0]['token']
 
 def get_all_books():
-    url = URI_API_WORKS + '?filter=work_type:monograph,uri_scheme:urn:isbn,canonical:true'
+    url = URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn'
     return request_identifiers(url)
 
 def get_work(uuid):
