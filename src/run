@@ -39,7 +39,7 @@ def get_token(url, email, passwd):
         assert res.status == 200
     except AssertionError:
         raise ValueError(content)
-    return json.loads(content)['data'][0]['token']
+    return json.loads(content.decode('utf-8'))['data'][0]['token']
 
 
 def get_all_books():
@@ -65,7 +65,7 @@ def get_chapters(serialised_isbns):
     except AssertionError:
         raise ValueError(content)
 
-    return json.loads(content)['message']['items']
+    return json.loads(content.decode('utf-8'))['message']['items']
 
 
 def get_from_doi(doi):
@@ -92,7 +92,7 @@ def request_identifiers(url):
     except AssertionError:
         raise ValueError(content)
 
-    return json.loads(content)['data']
+    return json.loads(content.decode('utf-8'))['data']
 
 
 def get_uuid_from_uris(uris):
