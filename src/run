@@ -50,7 +50,7 @@ def get_work(uuid):
     return request_identifiers(url)[0]
 
 def get_chapters(serialised_isbns):
-    url = "https://api.crossref.org/works?filter=type:book-chapter,type:book-part,type:book-section,type:component," + serialised_isbns + "&select=title,DOI,ISBN,type,URL&rows=" + CROSSREF_ROWS
+    url = "https://api.crossref.org/works?filter=type:book-chapter,type:book-part,type:book-section,type:component," + serialised_isbns + "&select=title,DOI,ISBN,type,URL,link&rows=" + CROSSREF_ROWS
     h = httplib2.Http()
     res, content = h.request(url, 'GET', headers={'User-Agent': USER_AGENT})
     try:
@@ -146,6 +146,14 @@ def process_works(works):
             input_uris.append(standarise_uri(doi, "true"))
             input_uris.append(standarise_uri(chapter['URL']))
             input_uris = input_uris + standarise_uris(parent_isbns)
+
+            # Text-mining and similarity-checking URLs may be found in 'link'
+            try:
+                for l in chapter['link']:
+                    input_uris.append(standarise_uri(l['URL']))
+            except KeyError:
+                pass
+
             try:
                 uris = get_from_doi(doi)
                 chap_uuid = get_uuid_from_uris(uris)
