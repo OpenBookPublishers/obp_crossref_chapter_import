@@ -43,7 +43,8 @@ def get_token(url, email, passwd):
 
 
 def get_all_books():
-    url = URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn'
+    url = (URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
+           + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
     return request_identifiers(url)
 
 
@@ -53,7 +54,10 @@ def get_work(uuid):
 
 
 def get_chapters(serialised_isbns):
-    url = "https://api.crossref.org/works?filter=type:book-chapter,type:book-part,type:book-section,type:component," + serialised_isbns + "&select=title,DOI,ISBN,type,URL,link&rows=" + CROSSREF_ROWS
+    url = ("https://api.crossref.org/works?filter=type:book-chapter,"
+           + "type:book-part,type:book-section,type:component,"
+           + serialised_isbns + "&select=title,DOI,ISBN,type,URL,link&rows="
+           + CROSSREF_ROWS)
     h = httplib2.Http()
     res, content = h.request(url, 'GET', headers={'User-Agent': USER_AGENT})
     try:
