@@ -43,7 +43,7 @@ def get_config():
     config.auth = 'Bearer ' + api_jwtoken
 
     config.dry_run = "DRY_RUN" in os.environ
-    config.debug   = "DEBUG"   in os.environ
+    config.debug   = "DEBUG" in os.environ
 
     return config
 
@@ -61,8 +61,8 @@ def get_token(url, email, passwd):
 
 
 def get_all_books(config):
-    url = (config.URI_API_WORKS +
-           '?filter=work_type:monograph,work_type:book,work_'
+    url = (config.URI_API_WORKS
+           + '?filter=work_type:monograph,work_type:book,work_'
            + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
     return request_identifiers(url, config)
 
