@@ -178,8 +178,10 @@ def process_work(work, config):
     # get children
     work_record = get_work(uuid, config)
     children = work_record['child']
-
     for chapter in chapters:
+        process_chapter(work_isbns, uuid, children, chapter, config)
+
+def process_chapter(work_isbns, uuid, children, chapter, config):
         isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
         parent_isbns = ["urn:isbn:" + i for i in work_isbns]
         doi = "info:doi:" + chapter['DOI']
@@ -207,7 +209,7 @@ def process_work(work, config):
             work = {'title': title, 'type': wtype, 'URI': input_uris,
                     'parent': parent}
             submit(config.URI_API_WORKS, work, config)
-            continue
+            return
 
         # insert input URIs if not already in database
         for uri in input_uris:
@@ -224,7 +226,7 @@ def process_work(work, config):
         except AssertionError:
             relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
             submit(config.URI_API_REL, relation, config)
-            continue
+            return
 
 
 def process_works(works, config):
