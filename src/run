@@ -58,10 +58,10 @@ def get_token(url, email, passwd):
     return json.loads(content.decode('utf-8'))['data'][0]['token']
 
 
-def get_all_books(auth, config):
+def get_all_books(config):
     url = (config.URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
            + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
-    return request_identifiers(url, auth)
+    return request_identifiers(url, config.auth)
 
 
 def get_work(uuid, auth, config):
@@ -224,7 +224,7 @@ def process_works(works, auth, config):
 
 def run():
     config = get_config()
-    all_works = get_all_books(config.auth, config)
+    all_works = get_all_books(config)
     assert all_works
     process_works(all_works, config.auth, config)
 
