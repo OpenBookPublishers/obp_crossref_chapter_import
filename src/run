@@ -64,7 +64,7 @@ def get_all_books(config):
     return request_identifiers(url, config)
 
 
-def get_work(uuid, auth, config):
+def get_work(uuid, config):
     url = config.URI_API_WORKS + '?UUID=' + uuid
     return request_identifiers(url, config)[0]
 
@@ -152,7 +152,6 @@ def serialise_isbn(isbn):
 
 
 def process_works(works, config):
-    auth = config.auth
     for work in works:
         try:
             uuid = work['UUID']
@@ -173,7 +172,7 @@ def process_works(works, config):
             continue
 
         # get children
-        work_record = get_work(uuid, auth, config)
+        work_record = get_work(uuid, config)
         children = work_record['child']
 
         for chapter in chapters:
