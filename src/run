@@ -73,6 +73,9 @@ def get_work(uuid, config):
 
 
 def get_chapters(serialised_isbns, config):
+    """Given a string of ISBNs and some API config, return a tuple
+       containing chapter data for the works in question, of type:
+       (success boolean, list of chapter data)."""
     url = ("https://api.crossref.org/works?filter=type:book-chapter,"
            + "type:book-part,type:book-section,type:component,"
            + serialised_isbns + "&select=title,DOI,ISBN,type,URL,link&rows="
@@ -80,12 +83,10 @@ def get_chapters(serialised_isbns, config):
     h = httplib2.Http()
     res, content = h.request(url, 'GET', headers={'User-Agent':
                                                   config.USER_AGENT})
-    try:
-        assert res.status == 200
-    except AssertionError:
-        raise ValueError(content)
+    if res.status != 200:
+        return False, []
 
-    return json.loads(content.decode('utf-8'))['message']['items']
+    return True, json.loads(content.decode('utf-8'))['message']['items']
 
 
 def get_from_doi(doi, config):
@@ -165,10 +166,8 @@ def process_work(work, config):
         sys.stderr.write(work)
         sys.exit(1)
 
-    try:
-        chapters = get_chapters(serialised_isbns, config)
-        assert chapters
-    except (ValueError, AssertionError):
+    success, chapters = get_chapters(serialised_isbns, config)
+    if not success:
         msg = "No chapters found for: %s (%s)\n"
         sys.stderr.write(msg % (work['title'][0], uuid))
         return
