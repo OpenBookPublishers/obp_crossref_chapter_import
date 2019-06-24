@@ -202,7 +202,7 @@ def process_work(work, config):
             work = {'title': title, 'type': wtype, 'URI': input_uris,
                     'parent': parent}
             submit(config.URI_API_WORKS, work, config)
-            return
+            continue
 
         # insert input URIs if not already in database
         for uri in input_uris:
@@ -219,7 +219,7 @@ def process_work(work, config):
         except AssertionError:
             relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
             submit(config.URI_API_REL, relation, config)
-            return
+            continue
 
 
 def process_works(works, config):
