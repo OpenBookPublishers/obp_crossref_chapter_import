@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Find missing chapters and/or chapter identifiers in Crossref and submit new findings to the identifier translation service.
+"""Find missing chapters and/or chapter identifiers in Crossref and
+submit new findings to the identifier translation service.  If
+`dry_run' is set to True, then don't actually submit any data to
+the API.
 
 usage: python run
 
@@ -19,6 +21,8 @@ import csv
 import json
 import urllib2
 import httplib2
+
+dry_run       = False
 
 USER_AGENT    = os.environ['USER_AGENT']
 CROSSREF_ROWS = os.environ['CROSSREF_ROWS']
@@ -63,7 +67,10 @@ def submit(url, data):
     h = httplib2.Http()
     headers = {'content-type': 'application/json',
                'Authorization': 'Bearer ' + API_JWTOKEN}
-    res, content = h.request(url, 'POST', json.dumps(data), headers)
+    body = json.dumps(data)
+    if dry_run:
+        return
+    res, content = h.request(url, 'POST', body, headers)
     try:
         assert res.status == 200
     except AssertionError:
