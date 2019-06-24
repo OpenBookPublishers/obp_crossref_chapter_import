@@ -150,7 +150,8 @@ def serialise_isbn(isbn):
     return 'isbn:' + isbn + ','
 
 
-def process_works(works, auth, config):
+def process_works(works, config):
+    auth = config.auth
     for work in works:
         try:
             uuid = work['UUID']
@@ -226,7 +227,7 @@ def run():
     config = get_config()
     all_works = get_all_books(config)
     assert all_works
-    process_works(all_works, config.auth, config)
+    process_works(all_works, config)
 
 
 if __name__ == '__main__':
