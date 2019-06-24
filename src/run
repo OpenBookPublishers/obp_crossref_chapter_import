@@ -20,8 +20,6 @@ import sys
 import json
 import httplib2
 
-dry_run       = False
-
 def get_config():
     keys = [
         "USER_AGENT",
@@ -42,6 +40,8 @@ def get_config():
                             config.URI_API_USER,
                             config.URI_API_PASS)
     config.auth = 'Bearer ' + api_jwtoken
+
+    config.dry_run = "DRY_RUN" in os.environ
 
     return config
 
@@ -95,7 +95,7 @@ def submit(url, data, config):
     headers = {'content-type': 'application/json',
                'Authorization': config.auth}
     body = json.dumps(data)
-    if dry_run:
+    if config.dry_run:
         return
     res, content = h.request(url, 'POST', body, headers)
     try:
