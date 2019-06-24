@@ -192,11 +192,9 @@ def process_chapter(work_isbns, uuid, children, chapter, config):
     input_uris = input_uris + standarise_uris(parent_isbns)
 
     # Text-mining and similarity-checking URLs may be found in 'link'
-    try:
-        for l in chapter['link']:
+    for l in chapter.get('link', []):
+        if 'URL' in l:
             input_uris.append(standarise_uri(l['URL']))
-    except KeyError:
-        pass
 
     try:
         uris = get_from_doi(doi, config)
