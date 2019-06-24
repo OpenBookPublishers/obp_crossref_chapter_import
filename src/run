@@ -151,8 +151,7 @@ def serialise_isbn(isbn):
     return 'isbn:' + isbn + ','
 
 
-def process_works(works, config):
-    for work in works:
+def process_work(work, config):
         try:
             uuid = work['UUID']
             work_isbns = get_isbns_from_uris(work['URI'])
@@ -169,7 +168,7 @@ def process_works(works, config):
         except (ValueError, AssertionError):
             msg = "No chapters found for: %s (%s)\n"
             sys.stderr.write(msg % (work['title'][0], uuid))
-            continue
+            return
 
         # get children
         work_record = get_work(uuid, config)
@@ -203,7 +202,7 @@ def process_works(works, config):
                 work = {'title': title, 'type': wtype, 'URI': input_uris,
                         'parent': parent}
                 submit(config.URI_API_WORKS, work, config)
-                continue
+                return
 
             # insert input URIs if not already in database
             for uri in input_uris:
@@ -220,8 +219,12 @@ def process_works(works, config):
             except AssertionError:
                 relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
                 submit(config.URI_API_REL, relation, config)
-                continue
+                return
 
+
+def process_works(works, config):
+    for work in works:
+        process_work(work, config)
 
 def run():
     config = get_config()
