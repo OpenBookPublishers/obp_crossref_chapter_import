@@ -99,7 +99,7 @@ def submit(url, data, config):
                'Authorization': config.auth}
     body = json.dumps(data)
     if config.debug:
-        print body
+        print(body)
     if config.dry_run:
         return
     res, content = h.request(url, 'POST', body, headers)
@@ -230,6 +230,7 @@ def process_work(work, config):
 def process_works(works, config):
     for work in works:
         process_work(work, config)
+
 
 def run():
     config = get_config()
