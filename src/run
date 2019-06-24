@@ -219,7 +219,7 @@ def process_works(works, config):
                 assert chap_uuid in children
             except AssertionError:
                 relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
-                submit(config.URI_API_REL, relation)
+                submit(config.URI_API_REL, relation, auth)
                 continue
 
 
