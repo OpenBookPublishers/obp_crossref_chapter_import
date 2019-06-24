@@ -20,6 +20,7 @@ import sys
 import json
 import httplib2
 
+
 def get_config():
     keys = [
         "USER_AGENT",
@@ -32,7 +33,7 @@ def get_config():
         "URI_API_URIS",
         "URI_API_REL"
     ]
-    config = type('Config', (), {})() # creates anonymous object
+    config = type('Config', (), {})()  # creates anonymous object
     for key in keys:
         setattr(config, key, os.environ[key])
 
@@ -60,7 +61,8 @@ def get_token(url, email, passwd):
 
 
 def get_all_books(config):
-    url = (config.URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
+    url = (config.URI_API_WORKS +
+           '?filter=work_type:monograph,work_type:book,work_'
            + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
     return request_identifiers(url, config)
 
