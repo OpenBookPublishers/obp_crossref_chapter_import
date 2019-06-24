@@ -161,11 +161,10 @@ def process_work(work, config):
         uuid = work['UUID']
         work_isbns = get_isbns_from_uris(work['URI'])
         serialised_isbns = ''.join([serialise_isbn(i) for i in work_isbns])
-        assert uuid and serialised_isbns
-    except AssertionError:
-        sys.stderr.write("Malformed record:\n")
-        sys.stderr.write(work)
-        sys.exit(1)
+        if not (uuid and serialised_isbns):
+            sys.stderr.write("Malformed record:\n")
+            sys.stderr.write(work)
+            sys.exit(1)
 
     try:
         chapters = get_chapters(serialised_isbns, config)
