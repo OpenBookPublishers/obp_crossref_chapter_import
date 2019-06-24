@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Find missing chapters and/or chapter identifiers in Crossref and
 submit new findings to the identifier translation service.  If
-`dry_run' is set to True, then don't actually submit any data to
+`$DRY_RUN' exists in the environment, then don't actually submit any data to
 the API.
 
 usage: python run
