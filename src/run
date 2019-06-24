@@ -209,12 +209,12 @@ def process_works(works, auth):
 
 
 def run():
-    API_JWTOKEN = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
-    AUTH = 'Bearer ' + API_JWTOKEN
-    assert API_JWTOKEN
-    all_works = get_all_books(AUTH)
+    api_jwtoken = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
+    auth = 'Bearer ' + api_jwtoken
+    assert api_jwtoken
+    all_works = get_all_books(auth)
     assert all_works
-    process_works(all_works, AUTH)
+    process_works(all_works, auth)
 
 
 if __name__ == '__main__':
