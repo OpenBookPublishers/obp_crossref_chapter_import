@@ -157,14 +157,13 @@ def serialise_isbn(isbn):
 
 
 def process_work(work, config):
-    try:
-        uuid = work['UUID']
-        work_isbns = get_isbns_from_uris(work['URI'])
-        serialised_isbns = ''.join([serialise_isbn(i) for i in work_isbns])
-        if not (uuid and serialised_isbns):
-            sys.stderr.write("Malformed record:\n")
-            sys.stderr.write(work)
-            sys.exit(1)
+    uuid = work['UUID']
+    work_isbns = get_isbns_from_uris(work['URI'])
+    serialised_isbns = ''.join([serialise_isbn(i) for i in work_isbns])
+    if not (uuid and serialised_isbns):
+        sys.stderr.write("Malformed record:\n")
+        sys.stderr.write(work)
+        sys.exit(1)
 
     try:
         chapters = get_chapters(serialised_isbns, config)
