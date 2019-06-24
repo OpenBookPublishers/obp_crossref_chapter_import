@@ -181,6 +181,7 @@ def process_work(work, config):
     for chapter in chapters:
         process_chapter(work_isbns, uuid, children, chapter, config)
 
+
 def process_chapter(work_isbns, uuid, children, chapter, config):
     isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
     parent_isbns = ["urn:isbn:" + i for i in work_isbns]
