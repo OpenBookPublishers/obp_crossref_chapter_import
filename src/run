@@ -90,10 +90,10 @@ def get_from_doi(doi, auth, config):
     return request_identifiers(url, auth)
 
 
-def submit(url, data, auth):
+def submit(url, data, config):
     h = httplib2.Http()
     headers = {'content-type': 'application/json',
-               'Authorization': auth}
+               'Authorization': config.auth}
     body = json.dumps(data)
     if dry_run:
         return
@@ -202,7 +202,7 @@ def process_works(works, config):
                 parent = uuid
                 work = {'title': title, 'type': wtype, 'URI': input_uris,
                         'parent': parent}
-                submit(config.URI_API_WORKS, work, auth)
+                submit(config.URI_API_WORKS, work, config)
                 continue
 
             # insert input URIs if not already in database
@@ -213,13 +213,13 @@ def process_works(works, config):
                 except AssertionError:
                     continue
                 new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
-                submit(config.URI_API_URIS, new_uri, auth)
+                submit(config.URI_API_URIS, new_uri, config)
             # add work_relation if not present
             try:
                 assert chap_uuid in children
             except AssertionError:
                 relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
-                submit(config.URI_API_REL, relation, auth)
+                submit(config.URI_API_REL, relation, config)
                 continue
 
 
