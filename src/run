@@ -45,15 +45,15 @@ def get_token(url, email, passwd):
     return json.loads(content.decode('utf-8'))['data'][0]['token']
 
 
-def get_all_books():
+def get_all_books(auth):
     url = (URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
            + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
-    return request_identifiers(url)
+    return request_identifiers(url, auth)
 
 
-def get_work(uuid):
+def get_work(uuid, auth):
     url = URI_API_WORKS + '?UUID=' + uuid
-    return request_identifiers(url)[0]
+    return request_identifiers(url, auth)[0]
 
 
 def get_chapters(serialised_isbns):
@@ -71,9 +71,9 @@ def get_chapters(serialised_isbns):
     return json.loads(content.decode('utf-8'))['message']['items']
 
 
-def get_from_doi(doi):
+def get_from_doi(doi, auth):
     url = URI_API_ENDP + "?uri=" + doi
-    return request_identifiers(url)
+    return request_identifiers(url, auth)
 
 
 def submit(url, data, auth):
@@ -90,9 +90,9 @@ def submit(url, data, auth):
         sys.stderr.write(content)
 
 
-def request_identifiers(url):
+def request_identifiers(url, auth):
     h = httplib2.Http()
-    res, content = h.request(url, 'GET', headers={'Authorization': AUTH})
+    res, content = h.request(url, 'GET', headers={'Authorization': auth})
     try:
         assert res.status == 200
     except AssertionError:
@@ -136,7 +136,7 @@ def serialise_isbn(isbn):
     return 'isbn:' + isbn + ','
 
 
-def process_works(works):
+def process_works(works, auth):
     for work in works:
         try:
             uuid = work['UUID']
@@ -157,7 +157,7 @@ def process_works(works):
             continue
 
         # get children
-        work_record = get_work(uuid)
+        work_record = get_work(uuid, auth)
         children = work_record['child']
 
         for chapter in chapters:
@@ -177,7 +177,7 @@ def process_works(works):
                 pass
 
             try:
-                uris = get_from_doi(doi)
+                uris = get_from_doi(doi, auth)
                 chap_uuid = get_uuid_from_uris(uris)
                 assert uris and uuid
             except (ValueError, AssertionError):
@@ -187,7 +187,7 @@ def process_works(works):
                 parent = uuid
                 work = {'title': title, 'type': wtype, 'URI': input_uris,
                         'parent': parent}
-                submit(URI_API_WORKS, work, AUTH)
+                submit(URI_API_WORKS, work, auth)
                 continue
 
             # insert input URIs if not already in database
@@ -198,7 +198,7 @@ def process_works(works):
                 except AssertionError:
                     continue
                 new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
-                submit(URI_API_URIS, new_uri, AUTH)
+                submit(URI_API_URIS, new_uri, auth)
             # add work_relation if not present
             try:
                 assert chap_uuid in children
@@ -209,14 +209,13 @@ def process_works(works):
 
 
 def run():
+    API_JWTOKEN = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
+    AUTH = 'Bearer ' + API_JWTOKEN
     assert API_JWTOKEN
-    all_works = get_all_books()
+    all_works = get_all_books(AUTH)
     assert all_works
-    process_works(all_works)
+    process_works(all_works, AUTH)
 
-
-API_JWTOKEN = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
-AUTH = 'Bearer ' + API_JWTOKEN
 
 if __name__ == '__main__':
     run()
