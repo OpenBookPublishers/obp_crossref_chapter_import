@@ -182,51 +182,51 @@ def process_work(work, config):
         process_chapter(work_isbns, uuid, children, chapter, config)
 
 def process_chapter(work_isbns, uuid, children, chapter, config):
-        isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
-        parent_isbns = ["urn:isbn:" + i for i in work_isbns]
-        doi = "info:doi:" + chapter['DOI']
-        input_uris = standarise_uris(isbns)
-        input_uris.append(standarise_uri(doi, "true"))
-        input_uris.append(standarise_uri(chapter['URL']))
-        input_uris = input_uris + standarise_uris(parent_isbns)
+    isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
+    parent_isbns = ["urn:isbn:" + i for i in work_isbns]
+    doi = "info:doi:" + chapter['DOI']
+    input_uris = standarise_uris(isbns)
+    input_uris.append(standarise_uri(doi, "true"))
+    input_uris.append(standarise_uri(chapter['URL']))
+    input_uris = input_uris + standarise_uris(parent_isbns)
 
-        # Text-mining and similarity-checking URLs may be found in 'link'
-        try:
-            for l in chapter['link']:
-                input_uris.append(standarise_uri(l['URL']))
-        except KeyError:
-            pass
+    # Text-mining and similarity-checking URLs may be found in 'link'
+    try:
+        for l in chapter['link']:
+            input_uris.append(standarise_uri(l['URL']))
+    except KeyError:
+        pass
 
-        try:
-            uris = get_from_doi(doi, config)
-            chap_uuid = get_uuid_from_uris(uris)
-            assert uris and uuid
-        except (ValueError, AssertionError):
-            # add new work
-            title  = chapter['title']
-            wtype  = chapter['type']
-            parent = uuid
-            work = {'title': title, 'type': wtype, 'URI': input_uris,
-                    'parent': parent}
-            submit(config.URI_API_WORKS, work, config)
-            return
+    try:
+        uris = get_from_doi(doi, config)
+        chap_uuid = get_uuid_from_uris(uris)
+        assert uris and uuid
+    except (ValueError, AssertionError):
+        # add new work
+        title  = chapter['title']
+        wtype  = chapter['type']
+        parent = uuid
+        work = {'title': title, 'type': wtype, 'URI': input_uris,
+                'parent': parent}
+        submit(config.URI_API_WORKS, work, config)
+        return
 
-        # insert input URIs if not already in database
-        for uri in input_uris:
-            candidate = get_uri_from_uris(uri['URI'], uris)
-            try:
-                assert candidate == ''
-            except AssertionError:
-                continue
-            new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
-            submit(config.URI_API_URIS, new_uri, config)
-        # add work_relation if not present
+    # insert input URIs if not already in database
+    for uri in input_uris:
+        candidate = get_uri_from_uris(uri['URI'], uris)
         try:
-            assert chap_uuid in children
+            assert candidate == ''
         except AssertionError:
-            relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
-            submit(config.URI_API_REL, relation, config)
-            return
+            continue
+        new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
+        submit(config.URI_API_URIS, new_uri, config)
+    # add work_relation if not present
+    try:
+        assert chap_uuid in children
+    except AssertionError:
+        relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
+        submit(config.URI_API_REL, relation, config)
+        return
 
 
 def process_works(works, config):
