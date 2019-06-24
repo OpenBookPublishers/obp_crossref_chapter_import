@@ -219,10 +219,9 @@ def process_chapter(work_isbns, uuid, children, chapter, config):
             continue
         new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
         submit(config.URI_API_URIS, new_uri, config)
+
     # add work_relation if not present
-    try:
-        assert chap_uuid in children
-    except AssertionError:
+    if chap_uuid not in children:
         relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
         submit(config.URI_API_REL, relation, config)
         return
