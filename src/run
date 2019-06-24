@@ -22,15 +22,28 @@ import httplib2
 
 dry_run       = False
 
-USER_AGENT    = os.environ['USER_AGENT']
-CROSSREF_ROWS = os.environ['CROSSREF_ROWS']
-URI_API_ENDP  = os.environ['URI_API_ENDP']
-URI_API_USER  = os.environ['URI_API_USER']
-URI_API_PASS  = os.environ['URI_API_PASS']
-AUTH_API_ENDP = os.environ['AUTH_API_ENDP']
-URI_API_WORKS = os.environ['URI_API_WORKS']
-URI_API_URIS  = os.environ['URI_API_URIS']
-URI_API_REL   = os.environ['URI_API_REL']
+def get_config():
+    keys = [
+        "USER_AGENT",
+        "CROSSREF_ROWS",
+        "URI_API_ENDP",
+        "URI_API_USER",
+        "URI_API_PASS",
+        "AUTH_API_ENDP",
+        "URI_API_WORKS",
+        "URI_API_URIS",
+        "URI_API_REL"
+    ]
+    config = type('Config', (), {})() # creates anonymous object
+    for key in keys:
+        setattr(config, key, os.environ[key])
+
+    api_jwtoken = get_token(config.AUTH_API_ENDP,
+                            config.URI_API_USER,
+                            config.URI_API_PASS)
+    config.auth = 'Bearer ' + api_jwtoken
+
+    return config
 
 
 def get_token(url, email, passwd):
@@ -45,24 +58,25 @@ def get_token(url, email, passwd):
     return json.loads(content.decode('utf-8'))['data'][0]['token']
 
 
-def get_all_books(auth):
-    url = (URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
+def get_all_books(auth, config):
+    url = (config.URI_API_WORKS + '?filter=work_type:monograph,work_type:book,work_'
            + 'type:edited-book,work_type:journal-issue,uri_scheme:urn:isbn')
     return request_identifiers(url, auth)
 
 
-def get_work(uuid, auth):
-    url = URI_API_WORKS + '?UUID=' + uuid
+def get_work(uuid, auth, config):
+    url = config.URI_API_WORKS + '?UUID=' + uuid
     return request_identifiers(url, auth)[0]
 
 
-def get_chapters(serialised_isbns):
+def get_chapters(serialised_isbns, config):
     url = ("https://api.crossref.org/works?filter=type:book-chapter,"
            + "type:book-part,type:book-section,type:component,"
            + serialised_isbns + "&select=title,DOI,ISBN,type,URL,link&rows="
-           + CROSSREF_ROWS)
+           + config.CROSSREF_ROWS)
     h = httplib2.Http()
-    res, content = h.request(url, 'GET', headers={'User-Agent': USER_AGENT})
+    res, content = h.request(url, 'GET', headers={'User-Agent':
+                                                  config.USER_AGENT})
     try:
         assert res.status == 200
     except AssertionError:
@@ -71,8 +85,8 @@ def get_chapters(serialised_isbns):
     return json.loads(content.decode('utf-8'))['message']['items']
 
 
-def get_from_doi(doi, auth):
-    url = URI_API_ENDP + "?uri=" + doi
+def get_from_doi(doi, auth, config):
+    url = config.URI_API_ENDP + "?uri=" + doi
     return request_identifiers(url, auth)
 
 
@@ -136,7 +150,7 @@ def serialise_isbn(isbn):
     return 'isbn:' + isbn + ','
 
 
-def process_works(works, auth):
+def process_works(works, auth, config):
     for work in works:
         try:
             uuid = work['UUID']
@@ -149,7 +163,7 @@ def process_works(works, auth):
             sys.exit(1)
 
         try:
-            chapters = get_chapters(serialised_isbns)
+            chapters = get_chapters(serialised_isbns, config)
             assert chapters
         except (ValueError, AssertionError):
             msg = "No chapters found for: %s (%s)\n"
@@ -157,7 +171,7 @@ def process_works(works, auth):
             continue
 
         # get children
-        work_record = get_work(uuid, auth)
+        work_record = get_work(uuid, auth, config)
         children = work_record['child']
 
         for chapter in chapters:
@@ -177,7 +191,7 @@ def process_works(works, auth):
                 pass
 
             try:
-                uris = get_from_doi(doi, auth)
+                uris = get_from_doi(doi, auth, config)
                 chap_uuid = get_uuid_from_uris(uris)
                 assert uris and uuid
             except (ValueError, AssertionError):
@@ -187,7 +201,7 @@ def process_works(works, auth):
                 parent = uuid
                 work = {'title': title, 'type': wtype, 'URI': input_uris,
                         'parent': parent}
-                submit(URI_API_WORKS, work, auth)
+                submit(config.URI_API_WORKS, work, auth)
                 continue
 
             # insert input URIs if not already in database
@@ -198,23 +212,21 @@ def process_works(works, auth):
                 except AssertionError:
                     continue
                 new_uri = {'UUID': chap_uuid, 'URI': uri['URI']}
-                submit(URI_API_URIS, new_uri, auth)
+                submit(config.URI_API_URIS, new_uri, auth)
             # add work_relation if not present
             try:
                 assert chap_uuid in children
             except AssertionError:
                 relation = {'parent_UUID': uuid, 'child_UUID': chap_uuid}
-                submit(URI_API_REL, relation)
+                submit(config.URI_API_REL, relation)
                 continue
 
 
 def run():
-    api_jwtoken = get_token(AUTH_API_ENDP, URI_API_USER, URI_API_PASS)
-    auth = 'Bearer ' + api_jwtoken
-    assert api_jwtoken
-    all_works = get_all_books(auth)
+    config = get_config()
+    all_works = get_all_books(config.auth, config)
     assert all_works
-    process_works(all_works, auth)
+    process_works(all_works, config.auth, config)
 
 
 if __name__ == '__main__':
