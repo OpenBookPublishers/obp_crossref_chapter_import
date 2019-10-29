@@ -18,6 +18,7 @@ import os
 import sys
 import json
 import httplib2
+import urllib.parse
 
 USER_AGENT    = os.environ['USER_AGENT']
 CROSSREF_ROWS = os.environ['CROSSREF_ROWS']
@@ -28,6 +29,7 @@ AUTH_API_ENDP = os.environ['AUTH_API_ENDP']
 URI_API_WORKS = os.environ['URI_API_WORKS']
 URI_API_URIS  = os.environ['URI_API_URIS']
 URI_API_REL   = os.environ['URI_API_REL']
+PREFIX        = os.environ.get('PREFIX')
 
 
 def get_token(url, email, passwd):
@@ -70,6 +72,11 @@ def get_chapters(serialised_isbns):
 
 def get_from_doi(doi):
     url = URI_API_ENDP + "?uri=" + doi
+    return request_identifiers(url)
+
+
+def get_from_title(title):
+    url = URI_API_ENDP + "?title=" + urllib.parse.quote(title)
     return request_identifiers(url)
 
 
@@ -158,6 +165,7 @@ def process_works(works):
             isbns = ["urn:isbn:" + i for i in chapter['ISBN']]
             parent_isbns = ["urn:isbn:" + i for i in work_isbns]
             doi = "info:doi:" + chapter['DOI']
+            title = chapter['title']
             input_uris = standarise_uris(isbns)
             input_uris.append(standarise_uri(doi, "true"))
             input_uris.append(standarise_uri(chapter['URL']))
@@ -171,12 +179,14 @@ def process_works(works):
                 pass
 
             try:
-                uris = get_from_doi(doi)
+                if not PREFIX or (PREFIX and doi.startswith(PREFIX)):
+                    uris = get_from_doi(doi)
+                else:
+                    uris = get_from_title(title)
                 chap_uuid = get_uuid_from_uris(uris)
                 assert uris and uuid
             except (ValueError, AssertionError):
                 # add new work
-                title  = chapter['title']
                 wtype  = chapter['type']
                 parent = uuid
                 work = {'title': title, 'type': wtype, 'URI': input_uris,
