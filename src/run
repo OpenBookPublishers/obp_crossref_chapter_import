@@ -89,7 +89,7 @@ def submit(url, data):
     try:
         assert res.status == 200
     except AssertionError:
-        sys.stderr.write(content)
+        sys.stderr.write(content.decode('utf-8'))
 
 
 def request_identifiers(url):
