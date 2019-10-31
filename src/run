@@ -20,16 +20,17 @@ import json
 import httplib2
 import urllib.parse
 
-USER_AGENT    = os.environ['USER_AGENT']
-CROSSREF_ROWS = os.environ['CROSSREF_ROWS']
-URI_API_ENDP  = os.environ['URI_API_ENDP']
-URI_API_USER  = os.environ['URI_API_USER']
-URI_API_PASS  = os.environ['URI_API_PASS']
-AUTH_API_ENDP = os.environ['AUTH_API_ENDP']
-URI_API_WORKS = os.environ['URI_API_WORKS']
-URI_API_URIS  = os.environ['URI_API_URIS']
-URI_API_REL   = os.environ['URI_API_REL']
-PREFIX        = os.environ.get('PREFIX')
+USER_AGENT      = os.environ['USER_AGENT']
+EXCLUDED_TITLES = json.loads(os.getenv('EXCLUDED_TITLES'))
+CROSSREF_ROWS   = os.environ['CROSSREF_ROWS']
+URI_API_ENDP    = os.environ['URI_API_ENDP']
+URI_API_USER    = os.environ['URI_API_USER']
+URI_API_PASS    = os.environ['URI_API_PASS']
+AUTH_API_ENDP   = os.environ['AUTH_API_ENDP']
+URI_API_WORKS   = os.environ['URI_API_WORKS']
+URI_API_URIS    = os.environ['URI_API_URIS']
+URI_API_REL     = os.environ['URI_API_REL']
+PREFIX          = os.environ.get('PREFIX')
 
 
 def get_token(url, email, passwd):
@@ -153,8 +154,9 @@ def process_works(works):
             chapters = get_chapters(serialised_isbns)
             assert chapters
         except (ValueError, AssertionError):
-            msg = "No chapters found for: %s (%s)\n"
-            sys.stderr.write(msg % (work['title'][0], uuid))
+            if work['title'][0] not in EXCLUDED_TITLES:
+                msg = "No chapters found for: %s (%s)\n"
+                sys.stderr.write(msg % (work['title'][0], uuid))
             continue
 
         # get children
@@ -166,8 +168,10 @@ def process_works(works):
             parent_isbns = ["urn:isbn:" + i for i in work_isbns]
             doi = "info:doi:" + chapter['DOI']
             title = chapter['title']
+            canonical_doi = not PREFIX or (PREFIX and doi.startswith(PREFIX))
+            canonical_doi_str = "true" if canonical_doi else "false"
             input_uris = standarise_uris(isbns)
-            input_uris.append(standarise_uri(doi, "true"))
+            input_uris.append(standarise_uri(doi, canonical_doi_str))
             input_uris.append(standarise_uri(chapter['URL']))
             input_uris = input_uris + standarise_uris(parent_isbns)
 
@@ -179,10 +183,10 @@ def process_works(works):
                 pass
 
             try:
-                if not PREFIX or (PREFIX and doi.startswith(PREFIX)):
+                if canonical_doi:
                     uris = get_from_doi(doi)
                 else:
-                    uris = get_from_title(title)
+                    uris = get_from_title(title[0])
                 chap_uuid = get_uuid_from_uris(uris)
                 assert uris and uuid
             except (ValueError, AssertionError):
